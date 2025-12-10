@@ -1,209 +1,166 @@
-= Sistema de Gestão de Qualidade e Manutenção Industrial
+# RELATÓRIO DE IMPLEMENTAÇÃO — SISTEMA DE CHAMADOS
 
-== 1. EquipamentoService
-
-Serviço básico para operações de CRUD em `Equipamento`.
-
-=== Métodos a Implementar
-
-==== 1. `Equipamento criarEquipamento(Equipamento equipamento)`
-
-* **Parâmetros:** `Equipamento equipamento`
-* **Retorno:** `Equipamento`
-* **Lógica:**
-  Salvar um equipamento com status operacional.
-
-==== 2. `Equipamento buscarEquipamentoPorId(long id)`
-
-* **Parâmetros:** `long id`
-* **Retorno:** `Equipamento`
-* **Lógica:**
-  Validar se o equipamento existe.
-  Se não existir, lançar `RuntimeException` com a mensagem:
-
-```
-Equipamento não encontrado!
-```
-
-Se existir, retornar o equipamento completo.
+Este documento descreve, de forma completa e organizada, o comportamento esperado de cada classe e de cada método para que todos os testes do Sistema de Chamados funcionem corretamente. Use-o como referência ao implementar os serviços.
 
 ---
 
-== 2. FalhaService (Lógica Crítica de Negócio)
+## Visão geral
+O projeto possui quatro serviços principais:
+- `UsuarioService`: operações básicas de usuário.
+- `ChamadoService`: abertura e consulta de chamados.
+- `AtendimentoService`: controle de início e fim do atendimento.
+- `RelatorioService`: consultas específicas e dados agregados.
 
-Este serviço orquestra o registro de falhas e suas consequências imediatas.
-
-=== Métodos a Implementar
-
-==== 1. `Falha registrarNovaFalha(Falha falha)`
-
-* **Parâmetros:** `Falha falha`
-* **Retorno:** `Falha`
-* **Lógica (Transacional):**
-
-- Validar se o equipamento existe.
-  Se não existir, lançar:
-
-```
-IllegalArgumentException: Equipamento não encontrado!
-```
-
-* Salvar a falha com status `ABERTA`.
-
-**Regra de Negócio:**
-Se a falha tiver criticidade **CRITICA**, atualizar o status do equipamento para `EM_MANUTENCAO`.
+Para cada método estão descritos: parâmetros, retorno e a lógica esperada (incluindo mensagens de exceção exatas).
 
 ---
 
-==== 2. `List<Falha> buscarFalhasCriticasAbertas()`
+## 1. UsuarioService
+Serviço responsável pelas operações básicas de usuário.
 
-* **Parâmetros:** Nenhum
-* **Retorno:** `List<Falha>`
-* **Lógica:**
-  Buscar falhas com:
+### Métodos a implementar
 
-```
-status = 'ABERTA'
-criticidade = 'CRITICA'
-```
+#### 1. cadastrarUsuario(Usuario usuario)
+- Parâmetros: `Usuario usuario`
+- Retorno: `Usuario` (usuario cadastrado)
+- Lógica:
+  - Se `usuario` for nulo, lançar:
+    - `RuntimeException("Usuário inválido!")`
+  - Se o `nome` for nulo ou vazio, lançar:
+    - `RuntimeException("Nome é obrigatório!")`
+  - Se o `email` for nulo ou vazio, lançar:
+    - `RuntimeException("Email é obrigatório!")`
+  - Salvar o usuário no banco.
+  - Retornar o usuário completo (conforme salvo no banco).
 
-Retornar a lista resultante.
-
----
-
-== 3. AcaoCorretivaService
-
-=== Métodos a Implementar
-
-==== 1. `AcaoCorretiva registrarConclusaoDeAcao(AcaoCorretiva acao)`
-
-* **Parâmetros:** `AcaoCorretiva acao`
-* **Retorno:** `AcaoCorretiva`
-* **Lógica:**
-
-- Validar se o id da falha é válido.
-  Se não for, lançar `RuntimeException`.
-- Salvar a ação corretiva.
-
-**Regras de Negócio:**
-
-1. Atualizar o status da falha para `RESOLVIDA`.
-2. Se a falha for `CRITICA`, atualizar o equipamento para `OPERACIONAL`.
+#### 2. buscarUsuarioPorId(long id)
+- Parâmetros: `long id`
+- Retorno: `Usuario`
+- Lógica:
+  - Buscar o usuário no banco.
+  - Se não existir, lançar:
+    - `RuntimeException("Usuário não encontrado!")`
+  - Retornar o usuário.
 
 ---
 
-== 4. RelatorioService
+## 2. ChamadoService
+Serviço responsável pela abertura e consulta de chamados.
 
-=== Métodos a Implementar
+### Métodos a implementar
 
-==== 1. `List<RelatorioParadaDTO> gerarRelatorioTempoParada()`
+#### 1. abrirChamado(Chamado chamado)
+- Parâmetros: `Chamado chamado`
+- Retorno: `Chamado` (chamado aberto)
+- Lógica:
+  - Se `chamado` for nulo, lançar:
+    - `RuntimeException("Chamado inválido!")`
+  - Validar usuário:
+    - Se `usuarioId` não existir no banco → `RuntimeException("Usuário não encontrado!")`
+  - Se a `descricao` for nula ou vazia → `RuntimeException("Descrição é obrigatória!")`
+  - Definir:
+    - `status = "ABERTO"`
+    - `dataAbertura = LocalDateTime.now()`
+  - Salvar o chamado no banco.
+  - Retornar o chamado salvo.
 
-* **Parâmetros:** Nenhum
-* **Retorno:** `List<RelatorioParadaDTO>`
-
----
-
-==== 2. `List<Equipamento> buscarEquipamentosSemFalhasPorPeriodo(LocalDate dataInicio, LocalDate dataFim)`
-
-* **Parâmetros:**
-  `LocalDate dataInicio`, `LocalDate dataFim`
-* **Retorno:** `List<Equipamento>`
-* **Lógica:**
-  Buscar equipamentos que não tiveram falhas no período informado.
-
----
-
-==== 3. `Optional<FalhaDetalhadaDTO> buscarDetalhesCompletosFalha(long falhaId)`
-
-* **Parâmetros:** `long falhaId`
-* **Retorno:** `FalhaDetalhadaDTO`
-* **Lógica:**
-  Validar se o id da falha é válido.
-  Se não for, lançar `RuntimeException`.
-
----
-
-==== 4. `List<EquipamentoContagemFalhasDTO> gerarRelatorioManutencaoPreventiva(int contagemMinimaFalhas)`
-
-* **Parâmetros:** `int contagemMinimaFalhas`
-* **Retorno:** `List<EquipamentoContagemFalhasDTO>`
-* **Lógica:**
-  Validar se o valor informado é maior que zero.
-  Se não for, lançar `RuntimeException`.
-  Se for válido, buscar equipamentos que tenham **quantidade de falhas maior ou igual** ao valor informado.
+#### 2. buscarChamadoPorId(long id)
+- Parâmetros: `long id`
+- Retorno: `Chamado`
+- Lógica:
+  - Buscar no banco.
+  - Se não existir → `RuntimeException("Chamado não encontrado!")`
+  - Retornar o chamado.
 
 ---
 
-= Tabelas do Banco de Dados
+## 3. AtendimentoService
+Serviço que controla o início e fim do atendimento de um chamado.
 
-== `Equipamento`
-Armazena os ativos físicos da planta.
+### Métodos a implementar
 
-## [source,sql]
+#### 1. iniciarAtendimento(Atendimento atendimento)
+- Parâmetros: `Atendimento atendimento`
+- Retorno: `Atendimento` (atendimento iniciado)
+- Lógica:
+  - Se `atendimento` for nulo, lançar:
+    - `RuntimeException("Atendimento inválido!")`
+  - Validar existência do chamado associado:
+    - Se não existe → `RuntimeException("Chamado não encontrado!")`
+  - Verificar se o chamado está com `status = "ABERTO"`:
+    - Caso contrário → `RuntimeException("Chamado não está aberto!")`
+  - Preencher:
+    - `dataInicio = LocalDateTime.now()`
+  - Salvar o atendimento no banco.
+  - Retornar o atendimento.
 
-CREATE TABLE IF NOT EXISTS Equipamento (
-id BIGINT AUTO_INCREMENT PRIMARY KEY,
-nome VARCHAR(255) NOT NULL,
-numeroDeSerie VARCHAR(100) NOT NULL UNIQUE,
-areaSetor VARCHAR(100) NOT NULL,
-statusOperacional VARCHAR(50) NOT NULL,
+#### 2. finalizarAtendimento(long id, String solucao)
+- Parâmetros: `long id`, `String solucao`
+- Retorno: `Atendimento` (atendimento finalizado)
+- Lógica:
+  - Buscar atendimento por ID.
+  - Se não existir → `RuntimeException("Atendimento não encontrado!")`
+  - Preencher:
+    - `solucao =` solução recebida
+    - `dataFim = LocalDateTime.now()`
+  - Atualizar registro no banco.
+  - Retornar o atendimento finalizado.
 
-```
-CONSTRAINT chk_status_equipamento CHECK (
-    statusOperacional IN ('OPERACIONAL', 'EM_MANUTENCAO', 'INATIVO')
-)
-```
+---
 
-## );
+## 4. RelatorioService
+Serviço de consultas específicas e dados agregados.
 
-== `Falha`
-Registra cada ocorrência de falha vinculada a um equipamento.
+### Métodos a implementar
 
-## [source,sql]
+#### 1. listarChamadosAbertosPorPrioridade(String prioridade)
+- Parâmetros: `String prioridade`
+- Retorno: `List<ChamadoResumoDTO>`
+- Lógica:
+  - Buscar no banco os chamados onde:
+    - `status = "ABERTO"`
+    - `prioridade = prioridade`
+  - Retornar a lista (pode ser vazia, mas nunca `null`).
 
-CREATE TABLE IF NOT EXISTS Falha (
-id BIGINT AUTO_INCREMENT PRIMARY KEY,
-equipamentoId BIGINT NOT NULL,
-dataHoraOcorrencia DATETIME NOT NULL,
-descricao TEXT NOT NULL,
-criticidade VARCHAR(50) NOT NULL,
-status VARCHAR(50) NOT NULL,
-tempoParadaHoras DECIMAL(10, 2) DEFAULT 0.00,
+#### 2. gerarRelatorioUsuariosComMaisChamados(int minimo)
+- Parâmetros: `int minimo`
+- Retorno: `List<UsuarioContagemChamadosDTO>`
+- Lógica:
+  - Se `minimo <= 0` → `RuntimeException("Valor mínimo inválido!")`
+  - Consultar no banco usuários com quantidade de chamados ≥ `minimo`.
+  - Retornar lista (vazia ou com dados).
 
-```
-CONSTRAINT chk_criticidade_falha CHECK (
-    criticidade IN ('BAIXA','MEDIA','ALTA','CRITICA')
-),
-CONSTRAINT chk_status_falha CHECK (
-    status IN ('ABERTA','EM_ANDAMENTO','RESOLVIDA')
-),
+#### 3. buscarDetalhesChamado(long id)
+- Parâmetros: `long id`
+- Retorno: `Optional<ChamadoResumoDTO>`
+- Lógica:
+  - Se `id <= 0` → `RuntimeException("ID inválido!")`
+  - Buscar o chamado com join no usuário.
+  - Se não encontrar → `Optional.empty()`
+  - Se encontrar → `Optional.of(dto)`
 
-CONSTRAINT fk_falha_equipamento
-    FOREIGN KEY (equipamentoId)
-    REFERENCES Equipamento(id)
-    ON DELETE RESTRICT
-```
+---
 
-## );
+## Ordem ideal para implementar a atividade
+Para evitar erros e facilitar o desenvolvimento, implemente na seguinte ordem:
 
-== `AcaoCorretiva`
-Detalha as ações tomadas para resolução de uma falha.
+1. Criar/implementar `UsuarioService`  
+   (Obrigatório para o funcionamento do `ChamadoService`.)
 
-## [source,sql]
+2. Criar/implementar `ChamadoService`  
+   (Necessário antes de iniciar atendimentos.)
 
-CREATE TABLE IF NOT EXISTS AcaoCorretiva (
-id BIGINT AUTO_INCREMENT PRIMARY KEY,
-falhaId BIGINT NOT NULL,
-dataHoraInicio DATETIME NOT NULL,
-dataHoraFim DATETIME NOT NULL,
-responsavel VARCHAR(255) NOT NULL,
-descricaoAcao TEXT NOT NULL,
+3. Criar/implementar `AtendimentoService`  
+   (Depende do `ChamadoService`.)
 
-```
-CONSTRAINT fk_acao_falha
-    FOREIGN KEY (falhaId)
-    REFERENCES Falha(id)
-    ON DELETE RESTRICT
-```
+4. Criar/implementar `RelatorioService`  
+   (Depende das tabelas de `Chamado` + `Usuario`.)
 
-## );
+5. Rodar todos os testes e corrigir exceções caso necessário.
+
+---
+
+## Observações finais
+- As mensagens de exceção devem ser exatamente as especificadas acima para que os testes unitários possam validar os comportamentos.
+- Listas retornadas devem ser nunca `null` (retornar lista vazia quando aplicável).
+- Use `LocalDateTime.now()` para preencher datas de abertura, início e término conforme indicado.
