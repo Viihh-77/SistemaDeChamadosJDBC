@@ -10,9 +10,9 @@ public class AtendimentoRepository {
     public Atendimento iniciarAtendimento(Atendimento atendimento) throws SQLException {
 
         String query = """
-                INSERT INTO Atendimento 
+                INSERT INTO Atendimento
                 (chamadoId, tecnicoResponsavel, dataInicio, solucao, dataFim)
-                VALUES 
+                VALUES
                 (?, ?, ?, ?, ?)
                 """;
 
