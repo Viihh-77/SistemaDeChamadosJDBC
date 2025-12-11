@@ -1,11 +1,16 @@
+import org.example.database.Conexao;
 import org.example.model.Chamado;
 import org.example.model.Usuario;
 import org.example.service.chamado.ChamadoService;
+import org.example.service.chamado.ChamadoServiceImpl;
 import org.example.service.usuario.UsuarioService;
+import org.example.service.usuario.UsuarioServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,31 +20,47 @@ class ChamadoServiceTest {
     private UsuarioService usuarioService;
 
     @BeforeEach
-    void setup() {
-        chamadoService = new ChamadoService() {
-            @Override
-            public Chamado abrirChamado(Chamado chamado) throws SQLException {
-                return null;
-            }
-
-            @Override
-            public Chamado buscarChamadoPorId(long id) throws SQLException {
-                return null;
-            }
-        };
-
-        usuarioService = new UsuarioService() {
-            @Override
-            public Usuario cadastrarUsuario(Usuario usuario) {
-                return usuario;
-            }
-
-            @Override
-            public Usuario buscarUsuarioPorId(long id) {
-                return null;
-            }
-        };
+    void setup() throws SQLException {
+        prepararBanco();
+        usuarioService = new UsuarioServiceImpl();
+        chamadoService = new ChamadoServiceImpl();
     }
+
+    // 🔧 CRIA AS TABELAS ANTES DE CADA TESTE
+    private void prepararBanco() throws SQLException {
+        try (Connection conn = Conexao.conectar();
+             Statement stmt = conn.createStatement()) {
+
+            stmt.execute("DROP TABLE IF EXISTS Chamado");
+            stmt.execute("DROP TABLE IF EXISTS Usuario");
+
+            stmt.execute("""
+                CREATE TABLE Usuario (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    nome VARCHAR(100) NOT NULL,
+                    email VARCHAR(100) NOT NULL,
+                    setor VARCHAR(100),
+                    ativo BOOLEAN
+                )
+            """);
+
+            stmt.execute("""
+                CREATE TABLE Chamado (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    usuarioId INT NOT NULL,
+                    descricao VARCHAR(255) NOT NULL,
+                    prioridade VARCHAR(20),
+                    status VARCHAR(20),
+                    dataAbertura TIMESTAMP,
+                    FOREIGN KEY (usuarioId) REFERENCES Usuario(id)
+                )
+            """);
+        }
+    }
+
+    // --------------------------
+    //          TESTES
+    // --------------------------
 
     @Test
     void naoDeveAbrirChamadoComObjetoNulo() {
@@ -63,8 +84,14 @@ class ChamadoServiceTest {
 
     @Test
     void naoDeveAbrirChamadoSemDescricao() throws SQLException {
+        // Cadastra usuário válido
+        Usuario u = new Usuario();
+        u.setNome("Carlos");
+        u.setEmail("carlos@gmail.com");
+        usuarioService.cadastrarUsuario(u);
+
         Chamado ch = new Chamado();
-        ch.setUsuarioId(1);
+        ch.setUsuarioId(u.getId());
         ch.setPrioridade("MEDIA");
 
         RuntimeException ex = assertThrows(
@@ -83,7 +110,7 @@ class ChamadoServiceTest {
         usuarioService.cadastrarUsuario(u);
 
         Chamado ch = new Chamado();
-        ch.setUsuarioId(1);
+        ch.setUsuarioId(u.getId());
         ch.setDescricao("Computador não liga");
         ch.setPrioridade("ALTA");
 
@@ -95,7 +122,7 @@ class ChamadoServiceTest {
     }
 
     @Test
-    void deveRetornarErroSeChamadoNaoExistirAoBuscar() throws SQLException {
+    void deveRetornarErroSeChamadoNaoExistirAoBuscar() {
         RuntimeException ex = assertThrows(
                 RuntimeException.class,
                 () -> chamadoService.buscarChamadoPorId(999)

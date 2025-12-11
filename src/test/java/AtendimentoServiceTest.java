@@ -13,7 +13,6 @@ import org.junit.jupiter.api.*;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -147,6 +146,7 @@ public class AtendimentoServiceTest {
         c.setDescricao("Computador não liga");
         c.setPrioridade("ALTA");
         c.setStatus("ABERTO");
+
         chamadoService.abrirChamado(c);
     }
 
@@ -168,7 +168,7 @@ public class AtendimentoServiceTest {
     void naoDeveIniciarSeChamadoNaoExistir() {
 
         Atendimento a = new Atendimento();
-        a.setChamadoId(999); // não existe
+        a.setChamadoId(999);
 
         RuntimeException ex = assertThrows(
                 RuntimeException.class,
@@ -187,7 +187,9 @@ public class AtendimentoServiceTest {
 
         Chamado ch = chamadoService.buscarChamadoPorId(1);
         ch.setStatus("FECHADO");
-        chamadoService.abrirChamado(ch); // atualiza para FECHADO
+
+        // 🔥 CORREÇÃO AQUI
+        chamadoService.abrirChamado(ch);
 
         Atendimento a = new Atendimento();
         a.setChamadoId(1);
@@ -239,7 +241,7 @@ public class AtendimentoServiceTest {
     }
 
     // ---------------------------------------------------
-    // TESTE 6 – NÃO DEVE FINALIZAR SE ID ATENDIMENTO INVÁLIDO
+    // TESTE 6 – NÃO DEVE FINALIZAR SE ATENDIMENTO NÃO EXISTE
     // ---------------------------------------------------
     @Test
     @Order(6)

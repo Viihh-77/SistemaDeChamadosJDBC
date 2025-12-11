@@ -8,6 +8,6 @@ public interface UsuarioService {
 
     Usuario cadastrarUsuario(Usuario usuario) throws SQLException;
 
-    Usuario buscarUsuarioPorId(long id);
+    Usuario buscarUsuarioPorId(long id) throws SQLException;
 
 }

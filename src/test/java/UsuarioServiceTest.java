@@ -1,9 +1,13 @@
+import org.example.database.Conexao;
 import org.example.model.Usuario;
 import org.example.service.usuario.UsuarioService;
+import org.example.service.usuario.UsuarioServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -12,18 +16,29 @@ class UsuarioServiceTest {
     private UsuarioService usuarioService;
 
     @BeforeEach
-    void setup() {
-        usuarioService = new UsuarioService() {
-            @Override
-            public Usuario cadastrarUsuario(Usuario usuario) {
-                return null;
-            }
+    void setup() throws SQLException {
+        usuarioService = new UsuarioServiceImpl();
+        prepararBanco();
+    }
 
-            @Override
-            public Usuario buscarUsuarioPorId(long id) {
-                return null;
-            }
-        };
+    private void prepararBanco() throws SQLException {
+        try (Connection conn = Conexao.conectar();
+             Statement stmt = conn.createStatement()) {
+
+            // Derruba a tabela com o nome EXATO que o repository usa
+            stmt.execute("DROP TABLE IF EXISTS Usuario");
+
+            // Cria a tabela igual à utilizada no repository
+            stmt.execute("""
+            CREATE TABLE Usuario (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                nome VARCHAR(100) NOT NULL,
+                email VARCHAR(100) NOT NULL,
+                setor VARCHAR(100),
+                ativo BOOLEAN
+            )
+        """);
+        }
     }
 
     @Test
@@ -67,6 +82,7 @@ class UsuarioServiceTest {
         Usuario cadastrado = usuarioService.cadastrarUsuario(u);
 
         assertNotNull(cadastrado);
+        assertNotNull(cadastrado.getId());
         assertEquals("Fernanda", cadastrado.getNome());
         assertEquals("fernanda@gmail.com", cadastrado.getEmail());
     }
